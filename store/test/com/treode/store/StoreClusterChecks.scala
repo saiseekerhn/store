@@ -342,81 +342,8 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       } finally {
         executor.shutdown()
       }}}
-  
-  def forVariousClusters [H <: Host] (
-      seed: Long
-  ) (
-      init: Random => ForStoreClusterRunner [H]
-  ) (implicit
-      config: StoreTestConfig
-  ) {
-    val seed = Random.nextLong()
-    
-    val countWith1 = for1host (seed) (init)
-    val countWith3 = for3hosts (seed) (init)
-    val countWith8 = for8hosts (seed) (init)
-    
-    val countWith3Offline1 = for3with1offline (seed) (init)
-    for3with1rebooting (seed, target(countWith3Offline1)) (init)
-    
-    val targetWith3 = target(countWith3)
-    
-    val countWith3Crashing1 = for3with1crashing (seed, targetWith3) (init)
-    if (countWith3Crashing1 > 1) {
-      for3with1bouncing (seed, targetWith3, target(countWith3Crashing1)) (init)
-    }
-    
-    for1to1 (seed, target(countWith1)) (init)
-    
-    val targetWith1to3 = target(countWith1)
-    val countWith1to3 = for1to3 (seed, targetWith1to3) (init)
-    if (countWith1to3 > 1) {
-     for1to3with1bouncing (seed, targetWith1to3, target(countWith1to3)) (init) 
-    }
 
-    val countWith3replacing1 = for3replacing1 (seed, targetWith3) (init)
-    if (countWith3replacing1 > 1) {
-      val targetWith3replacing1 = target(countWith3replacing1)
-      for3replacing1withSourceBouncing (seed, targetWith3, targetWith3replacing1) (init)
-      for3replacing1withTargetBouncing (seed, targetWith3, targetWith3replacing1) (init)
-      for3replacing1withCommonBouncing (seed, targetWith3, targetWith3replacing1) (init)
-    }
-    
-    val countWith3replacing2 = for3replacing2 (seed, targetWith3) (init)
-    if (countWith3replacing2 > 1) {
-      val targetWith3replacing2 = target(countWith3replacing2)
-      for3replacing2withSourceBouncing (seed, targetWith3, targetWith3replacing2) (init)
-      for3replacing2withTargetBouncing (seed, targetWith3, targetWith3replacing2) (init)
-      for3replacing2withCommonBouncing (seed, targetWith3, targetWith3replacing2) (init)
-    }
-    
-    val countWith3to3 = for3to3 (seed, targetWith3) (init)
-    if (countWith3to3 > 1) {
-      val targetWith3to3 = target(countWith3to3)
-      for3to3withSourceBouncing (seed, targetWith3, targetWith3to3) (init)
-      for3to3withTargetBouncing (seed, targetWith3, targetWith3to3) (init)
-    }
-    
-    for3to8 (seed, targetWith3) (init)
-    
-    for8to3 (seed, target(countWith8)) (init)
-  }
-  
-  def forVariousClusters [H <: Host] (
-      init: Random => ForStoreClusterRunner [H]
-  ) (implicit
-      config: StoreTestConfig
-  ) {
-    "for various clusters" taggedAs (Intensive, Periodic) in {
-      forSeeds (forVariousClusters (_) (init))
-    }
-  }
-  
-  private def target (n: Int): Int = {
-    Random.nextInt (n - 1) + 1
-  }
-  
-  private def forSeeds (test: Long => Any): Long = {
+   private def forSeeds (test: Long => Any): Long = {
     val start = System.currentTimeMillis
     for (_ <- 0 until nseeds)
       test (Random.nextLong())
@@ -464,6 +391,9 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
       else
         Issuing (hs0, hs1)
   }
+
+  private def target (n: Int): Int =
+    Random.nextInt (n - 1) + 1
 
   def for1host [H <: Host] (
       seed: Long
@@ -1643,6 +1573,75 @@ trait StoreClusterChecks extends AsyncChecks with TimeLimitedTests {
 
       runner.verify (hs) .expectPass()
     }
+
+ def forVariousClusters [H <: Host] (
+      seed: Long
+  ) (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    val seed = Random.nextLong()
+    
+    val countWith1 = for1host (seed) (init)
+    val countWith3 = for3hosts (seed) (init)
+    val countWith8 = for8hosts (seed) (init)
+    
+    val countWith3Offline1 = for3with1offline (seed) (init)
+    for3with1rebooting (seed, target(countWith3Offline1)) (init)
+    
+    val targetWith3 = target(countWith3)
+    
+    val countWith3Crashing1 = for3with1crashing (seed, targetWith3) (init)
+    if (countWith3Crashing1 > 1) {
+      for3with1bouncing (seed, targetWith3, target(countWith3Crashing1)) (init)
+    }
+    
+    for1to1 (seed, target(countWith1)) (init)
+    
+    val targetWith1to3 = target(countWith1)
+    val countWith1to3 = for1to3 (seed, targetWith1to3) (init)
+    if (countWith1to3 > 1) {
+     for1to3with1bouncing (seed, targetWith1to3, target(countWith1to3)) (init) 
+    }
+
+    val countWith3replacing1 = for3replacing1 (seed, targetWith3) (init)
+    if (countWith3replacing1 > 1) {
+      val targetWith3replacing1 = target(countWith3replacing1)
+      for3replacing1withSourceBouncing (seed, targetWith3, targetWith3replacing1) (init)
+      for3replacing1withTargetBouncing (seed, targetWith3, targetWith3replacing1) (init)
+      for3replacing1withCommonBouncing (seed, targetWith3, targetWith3replacing1) (init)
+    }
+    
+    val countWith3replacing2 = for3replacing2 (seed, targetWith3) (init)
+    if (countWith3replacing2 > 1) {
+      val targetWith3replacing2 = target(countWith3replacing2)
+      for3replacing2withSourceBouncing (seed, targetWith3, targetWith3replacing2) (init)
+      for3replacing2withTargetBouncing (seed, targetWith3, targetWith3replacing2) (init)
+      for3replacing2withCommonBouncing (seed, targetWith3, targetWith3replacing2) (init)
+    }
+    
+    val countWith3to3 = for3to3 (seed, targetWith3) (init)
+    if (countWith3to3 > 1) {
+      val targetWith3to3 = target(countWith3to3)
+      for3to3withSourceBouncing (seed, targetWith3, targetWith3to3) (init)
+      for3to3withTargetBouncing (seed, targetWith3, targetWith3to3) (init)
+    }
+     
+    for3to8 (seed, targetWith3) (init)
+    
+    for8to3 (seed, target(countWith8)) (init)
+  }
+  
+  def forVariousClusters [H <: Host] (
+      init: Random => ForStoreClusterRunner [H]
+  ) (implicit
+      config: StoreTestConfig
+  ) {
+    "for various clusters" taggedAs (Intensive, Periodic) in {
+      forSeeds (forVariousClusters (_) (init))
+    }
+  }
 
   def forAgentWithDeputy [H <: Host] (
       seed: Long
