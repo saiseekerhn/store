@@ -14,13 +14,29 @@
  * limitations under the License.
  */
 
-package example
+package com.treode.disk.edit
 
-import com.treode.store.Store
-import com.twitter.finatra.{Controller => FinatraController}
+import com.treode.async.io.File
+import com.treode.async.Async
+import com.treode.buffer.PagedBuffer
 
-class Peers (controller: Store.Controller) extends FinatraController {
+private class PageReader (
+  val file: File
+) {
 
-  get ("/peers") { request =>
-    render.appjson (controller.hosts (request.getSlice)) .toFuture
-  }}
+  val bits = 10
+  val buffer = PagedBuffer (bits)
+
+  /**
+   * Returns (if successful) the string of length `length` at `pos` in the
+   * file asynchronously, using a read buffer.
+   */
+  def readString (pos: Long, length: Int) : Async [String] = {
+    buffer.clear()
+    for {
+      _ <- file.fill (buffer, pos, length)
+    } yield {
+      buffer.readString ()
+    }
+  }
+}

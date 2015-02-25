@@ -20,7 +20,7 @@ import com.treode.async.{Async, Callback, Fiber, Scheduler}
 import com.treode.async.implicits._
 import com.treode.buffer.ArrayBuffer
 import com.treode.cluster.{Cluster, MessageDescriptor, Peer}
-import com.treode.disk.{Disk, ObjectId, PageDescriptor, PageHandler, Position}
+import com.treode.disk.{Disk, GroupId, ObjectId, PageDescriptor, PageHandler, Position}
 import com.treode.store.{Bytes, CatalogDescriptor, CatalogId}
 import com.treode.pickle.PicklerRegistry
 
@@ -33,7 +33,7 @@ private class Broker (
 ) (implicit
     scheduler: Scheduler,
     disk: Disk
-) extends PageHandler [Int] {
+) extends PageHandler {
 
   private val fiber = new Fiber
 
@@ -51,7 +51,7 @@ private class Broker (
 
   private def deliver (id: CatalogId, cat: Handler): Unit =
     scheduler.execute {
-      ports.unpickle (id.id, ArrayBuffer (cat.bytes.bytes))
+      ports.unpickle (id.id, ArrayBuffer.readable (cat.bytes.bytes))
     }
 
   def listen [C] (desc: CatalogDescriptor [C]) (f: C => Any): Unit =
@@ -79,7 +79,7 @@ private class Broker (
       val cat = _get (id)
       if (cat.patch (update))
         deliver (id, cat)
-  }
+    }
 
   private def _status: Ping =
     for ((id, cat) <- catalogs.toSeq)
@@ -120,20 +120,22 @@ private class Broker (
       gab()
     }}
 
-  def probe (obj: ObjectId, groups: Set [Int]): Async [Set [Int]] =
+  def probe (obj: ObjectId, groups: Set [GroupId]): Async [Set [GroupId]] =
     fiber.supply {
       _get (obj.id) .probe (groups)
     }
 
-  def compact (obj: ObjectId, groups: Set [Int]): Async [Unit] =
-    fiber.guard {
-      _get (obj.id) .compact (groups)
-    }
+  def compact (obj: ObjectId, groups: Set [GroupId]): Async [Unit] =
+    for {
+      cat <- get (obj.id)
+      _ <- cat.compact (groups)
+    } yield ()
 
   def checkpoint(): Async [Unit] =
-    fiber.guard {
-      catalogs.values.latch (_.checkpoint())
-    }
+    for {
+      cats <- fiber.supply (catalogs.values)
+      _ <- cats.latch (_.checkpoint())
+    } yield ()
 
   def attach () (implicit launch: Disk.Launch, cluster: Cluster) {
 
